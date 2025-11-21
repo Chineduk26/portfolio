@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product & Bot Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-content { display: none; position: absolute; background: white; min-width: 180px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1; }
+    .dropdown:hover .dropdown-content { display: block; }
+    .dropdown-content button { width: 100%; padding: 10px; border: none; background: white; text-align: left; cursor: pointer; }
+    .dropdown-content button:hover { background: #eee; }
+    .product { background: white; padding: 12px; margin: 8px 0; border-radius: 6px; display: flex; justify-content: space-between; }
+    #botBox { background: white; padding: 12px; margin-top: 15px; border-radius: 6px; display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h2>Product Management</h2>
+
+  <div class="dropdown">
+    <button>Menu ▾</button>
+    <div class="dropdown-content">
+      <button onclick="askBot()"> Ask Bot for Suggestion</button>
+      <button onclick="addProduct()">➕ Add Product</button>
+    </div>
+  </div>
+</header>
+
+<div id="productList"></div>
+
+<div id="botBox"></div>
+
+<script>
+const API = "http://localhost:5000";
+
+// FETCH ALL PRODUCTS
+async function loadProducts() {
+  const res = await fetch(`${API}/products`);
+  const data = await res.json();
+
+  const list = document.getElementById("productList");
+  list.innerHTML = "";
+
+  data.forEach(p => {
+    list.innerHTML += `
+      <div class='product'>
+        <div><strong>${p.name}</strong><br>$${p.price}</div>
+        <div>
+          <button onclick="editProduct(${p.id}, '${p.name}', ${p.price})">Edit</button>
+          <button onclick="deleteProduct(${p.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// CREATE PRODUCT
+async function addProduct() {
+  const name = prompt("Product name:");
+  const price = prompt("Price:");
+  if (!name || !price) return;
+
+  await fetch(`${API}/products`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, price })
+  });
+
+  loadProducts();
+}
+
+// UPDATE PRODUCT
+async function editProduct(id, oldName, oldPrice) {
+  const name = prompt("New name:", oldName);
+  const price = prompt("New price:", oldPrice);
+  if (!name || !price) return;
+
+  await fetch(`${API}/products/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, price })
+  });
+
+  loadProducts();
+}
+
+// DELETE PRODUCT
+async function deleteProduct(id) {
+  if (!confirm("Delete product?")) return;
+  await fetch(`${API}/products/${id}`, { method: "DELETE" });
+  loadProducts();
+}
+
+// BOT SUGGESTION
+async function askBot() {
+  const res = await fetch(`${API}/bot/suggest`);
+  const data = await res.json();
+
+  const botBox = document.getElementById("botBox");
+  botBox.style.display = "block";
+  botBox.innerHTML = `<strong>Bot Suggestion:</strong><br>${data.message}`;
+}
+
+// INIT
+loadProducts();
+</script>
+</body>
+</html>
